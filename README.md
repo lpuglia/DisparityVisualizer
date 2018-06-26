@@ -19,6 +19,6 @@ make
 
 it should be enough to create the executable.
 
-Output:
+## Output:
 
 ![GLUT Window](https://raw.githubusercontent.com/lpuglia/DisparityVisualizer/master/cones/sample.png)
