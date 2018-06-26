@@ -138,7 +138,6 @@ void display(){
 	glLoadIdentity();
 	camera.look();
 
-    glColor3f(1.0,1.0,1.0);
     glTranslated(-width/2/10,-height/2/10,0.0);
 
     glEnableClientState( GL_VERTEX_ARRAY );
@@ -149,9 +148,7 @@ void display(){
     glDisableClientState( GL_VERTEX_ARRAY );
     glDisableClientState( GL_COLOR_ARRAY );
     
-    BYTE pixels [3*widthS*heightS];
-    glReadPixels(0,0,widthS,heightS, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-	glutSwapBuffers();
+    glutSwapBuffers();
 }
 
 void reshape(int w, int h){
