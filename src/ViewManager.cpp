@@ -6,7 +6,7 @@ ViewManager::ViewManager(int width, int height){
     hWidth=width/2;
     hHeight=height/2;
     //glutSetCursor(GLUT_CURSOR_NONE);
-    glutWarpPointer(hWidth, hHeight/2);
+    //glutWarpPointer(hWidth, hHeight/2);
     pos[0] = 0.0;
     pos[1] = 0.0;
     pos[2] = 70.0;
@@ -90,45 +90,24 @@ void ViewManager::keyboardUp(unsigned char key, int x, int y){
 	}
 }
 
-void ViewManager::mouseMotion(int x, int y){
-    int centerX = hWidth;
-    int centerY = hHeight;
-    glutWarpPointer(centerX, centerY);
-
-    angley -= (y)*0.01;
-    anglex += (x)*0.01;
-    pre_x = x;
-    pre_y = y;
-}
-
 void ViewManager::movement(){
     if(moveForward){
 	pos[2]+=0.5;
-	//at[2]+=0.5;
     }
     if(moveBackward){
 	pos[2]-=0.5;
-	//at[2]-=0.5;
     }
     if(moveLeft){
         anglex -= 0.5;
-	//pos[0]-=0.5;
-	//at[0]-=0.5;
     }
     if(moveRight){
         anglex += 0.5;
-	//pos[0]+=0.5;
-	//at[0]+=0.5;
     }
     if(moveUp){
         angley -= 0.5;
-	//pos[1]-=0.5;
-	//at[1]-=0.5;
     }
     if(moveDown){
         angley += 0.5;
-	//pos[1]+=0.5;
-	//at[1]+=0.5;
     }
 }
 

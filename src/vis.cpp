@@ -1,13 +1,13 @@
 #include <GL/glut.h>
 #include <FreeImage.h>
-#include <stdlib.h>
 #include "../include/ViewManager.h"
+#include <string.h>
 
 using namespace std;
 
-int widthS=800, heightS=600;
+int widthS=640, heightS=400;
 int state=0;
-bool grid=false, disp=false;
+bool grid=false, disp=true;
 ViewManager camera;
 
 int width = 0;
@@ -16,7 +16,7 @@ int texture;
 
 BYTE *pixels;
 BYTE *disparity;
-BYTE *gaps;
+unsigned char* alpha;
 
 float* vertices;
 float* colors;
@@ -35,55 +35,49 @@ BYTE* LoadImage(char* filename) {
 	return vector;
 }
 
-int getVerticesCount( int width, int height ) {
-    return width * height * 3;
-}
-
 int getIndicesCount( int width, int height ) {
     return (width*height) + (width-1)*(height-2);
 }
 
 float* getVertices( int width, int height ) {
-    vertices = new float[ getVerticesCount( width, height ) ];
+    vertices = new float[ width * height * 3 ];
     int i = 0;
-
+    int j = 0;
     for ( int row=0; row<height; row++ ) {
         for ( int col=0; col<width; col++ ) {
             vertices[i++] = (float) col/10;
             vertices[i++] = (float) row/10;
-            vertices[i++] = 0.0f;
+            vertices[i++] = (float)disparity[j++]/4.0;
         }
     }
 
     return vertices;
 }
 
-float* getColors( int width, int height, int state ) {
-    colors = new float[ getVerticesCount( width, height ) ];
+float* getColors( int width, int height) {
+    colors = new float[ width * height * 4 ];
     int i = 0;
     BYTE* vector;
     if(state==0) vector=pixels;
     if(state==1) vector=disparity;
-    if(state==2) vector=gaps;
 
-    if(state==1){
-        int j=0;
-        for ( int row=0; row<height; row++ )
-            for ( int col=0; col<width; col++ ) {
-                //gray scale
-                colors[i] = (float)vector[j]/80.0;
-                colors[i+1] = (float)vector[j]/80.0;
-                colors[i+2] = (float)vector[j]/80.0;
-                i+=3; j++;
+    int j=0;
+    int k=0;
+    for ( int row=0; row<height; row++ )
+        for ( int col=0; col<width; col++ ) {
+            colors[i] = (float)vector[k+2]/255.0;
+            colors[i+1] = (float)vector[k+1]/255.0;
+            colors[i+2] = (float)vector[k]/255.0;
+            if (disparity[j]==0 || alpha[j]==1.0){
+                colors[i+3] = 0.0;
             }
-    }else
-        for ( int row=0; row<height; row++ )
-            for ( int col=0; col<width; col++ ) {
-                colors[i] = (float)vector[i+2]/255.0;
-                colors[i+1] = (float)vector[i+1]/255.0;
-                colors[i+2] = (float)vector[i]/255.0;
-                i+=3;
+            else{
+                colors[i+3] = 1.0;
             }
+            j++;
+            k+=3;
+            i+=4;
+        }
 
     return colors;
 }
@@ -109,6 +103,35 @@ int* getIndices( int width, int height ) {
     return indices;
 }
 
+int* setTransparencies(int width, int height ) {
+    int i = width;
+    int threshold = 3;
+    for ( int row=1; row<height-1; row++ ) {
+        for (int col=0; col<width; col++ ) {
+            if(
+                disparity[i]-disparity[i+1]      >threshold || 
+                disparity[i]-disparity[i-1]      >threshold || 
+                disparity[i]-disparity[i+width]  >threshold || 
+                disparity[i]-disparity[i-width]  >threshold || 
+                disparity[i]-disparity[i+width-1]>threshold || 
+                disparity[i]-disparity[i-width+1]>threshold ||
+                disparity[i]-disparity[i+width+1]>threshold || 
+                disparity[i]-disparity[i-width-1]>threshold
+            ){
+                alpha[i]         = 1;
+                alpha[i+1]       = 1;
+                alpha[i-1]       = 1;
+                alpha[i+width]   = 1;
+                alpha[i-width]   = 1;
+                alpha[i+width-1] = 1;
+                alpha[i-width+1] = 1;
+                alpha[i+width+1] = 1;
+                alpha[i-width-1] = 1;
+            }
+            i++;
+        }
+    }
+}
 
 void display(){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -121,13 +144,13 @@ void display(){
     glEnableClientState( GL_VERTEX_ARRAY );
     glEnableClientState( GL_COLOR_ARRAY );
     glVertexPointer( 3, GL_FLOAT, 0, vertices );
-    glColorPointer( 3, GL_FLOAT, 0, colors );
+    glColorPointer( 4, GL_FLOAT, 0, colors );
     glDrawElements( GL_TRIANGLE_STRIP, getIndicesCount(width,height), GL_UNSIGNED_INT, indices );
     glDisableClientState( GL_VERTEX_ARRAY );
     glDisableClientState( GL_COLOR_ARRAY );
-
-    //vertices[((rand()%(width*height))*3)+2]=(float)((rand()%100)-50)/10;
-
+    
+    BYTE pixels [3*widthS*heightS];
+    glReadPixels(0,0,widthS,heightS, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 	glutSwapBuffers();
 }
 
@@ -144,32 +167,6 @@ void keyboard(unsigned char key, int x, int y){
         case 27:  /*  Escape key  */
             exit (0);
             break;
-        case 'g':
-            if(!grid){
-                grid = true;
-                glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-            }else{
-                grid = false;
-                glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-            }
-            break;
-        case 'h':
-            state++;
-            state%=3;
-            getColors(width, height, state);
-            break;
-        case 'j':
-            if(!disp){
-                for(int i=0; i<width*height; i++){
-                    vertices[i*3+2]=(float)disparity[i]/2;
-                }
-                disp=true;
-            }else{
-                for(int i=0; i<width*height; i++){
-                    vertices[i*3+2]=0;
-                }
-                disp=false;
-            }
         default:
             camera.keyboard(key,x,y);
             break;
@@ -180,43 +177,38 @@ void keyboardUp(unsigned char key, int x, int y){
     camera.keyboardUp(key,x,y);
 }
 
-void mouseMotion(int x, int y){
-    //camera.mouseMotion(x,y);
-}
-
-void entry(int status){
-}
-
 void idle(void){
     camera.movement();
     glutPostRedisplay();
 }
 
 int main(int argc, char **argv){
-	glutInit(&argc, argv);
+    glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(widthS, heightS);
 	glutCreateWindow("Disparity Map Visualizer");
 
  	glutKeyboardFunc(keyboard);
 	glutKeyboardUpFunc(keyboardUp);
-    glutPassiveMotionFunc(mouseMotion);
-    glutEntryFunc(entry);
 	glutIdleFunc(idle);
 	glutReshapeFunc(reshape);
 
 	glutDisplayFunc(display);
-	glEnable(GL_DEPTH_TEST);
+    glEnable (GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_DEPTH_TEST);
 
-    disparity=LoadImage("../cones/bw_disparity_L.pgm");
-    pixels=LoadImage("../cones/conesL.ppm");
-    gaps=LoadImage("../cones/result_finalL.ppm");
+    disparity=LoadImage((char*)"../cones/bw_disparity_L.pgm");
+    pixels=LoadImage((char*)"../cones/conesL.ppm");
+    alpha = (unsigned char*) malloc(width*height);
 
     getVertices(width,height);
     getIndices(width,height);
-    getColors(width, height, state);
+    memset(alpha, 0, width*height);
+    setTransparencies(width,height);
+    getColors(width, height);
 
     camera = ViewManager(widthS,heightS);
-    //glutSetCursor(GLUT_CURSOR_NONE);
 	glutMainLoop();
+
 }
