@@ -191,9 +191,11 @@ int main(int argc, char **argv){
 	glutReshapeFunc(reshape);
 
 	glutDisplayFunc(display);
-    glEnable (GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    // glEnable (GL_BLEND);
+    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.5);
 
     disparity=LoadImage((char*)"../cones/bw_disparity_L.pgm");
     pixels=LoadImage((char*)"../cones/conesL.ppm");
