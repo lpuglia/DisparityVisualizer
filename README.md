@@ -17,4 +17,8 @@ cmake ..
 make
 ```
 
-it should be enough to create the executable
+it should be enough to create the executable.
+
+Output:
+
+![GLUT Window](https://raw.githubusercontent.com/lpuglia/DisparityVisualizer/master/cones/sample.png)
